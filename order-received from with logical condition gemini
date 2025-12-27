@@ -1,0 +1,139 @@
+<?php
+defined( 'ABSPATH' ) || exit;
+
+/** @var WC_Order $order */
+
+// --- 1. IDENTIFIKASI PESANAN ---
+$parent_id = $order->get_parent_id();
+$main_order_id = ( $parent_id && $parent_id > 0 ) ? $parent_id : $order->get_id();
+$main_order = wc_get_order( $main_order_id );
+
+$schedule = $main_order->get_meta( '_awcdp_deposits_payment_schedule', true );
+$is_fully_paid = ( $main_order->has_status( 'completed' ) );
+
+// --- 2. LOGIKA STATUS (ACOWEBS KEYS) ---
+$dp_done = false;
+$final_done = false;
+
+if ( is_array( $schedule ) ) {
+    if ( ! empty( $schedule['deposit']['id'] ) ) {
+        $dp_order = wc_get_order( absint( $schedule['deposit']['id'] ) );
+        if ( $dp_order && $dp_order->has_status( array( 'completed', 'processing' ) ) ) $dp_done = true;
+    }
+    if ( ! empty( $schedule['unlimited']['id'] ) ) {
+        $final_order = wc_get_order( absint( $schedule['unlimited']['id'] ) );
+        if ( $final_order && $final_order->has_status( array( 'completed', 'processing' ) ) ) $final_done = true;
+    }
+}
+?>
+
+<div style="background:#f9f9f9; padding:15px; line-height: 1.6; font-family: inherit;">
+    <div style="max-width:600px; margin:0 auto;">
+
+        <div style="background:#fff; border: 1px solid #ececec; border-radius:12px; padding:20px; margin-bottom:15px;">
+            <p style="margin:0; font-size:15px; color:#333;">
+                Terima kasih <strong><?php echo esc_html( $order->get_billing_first_name() ); ?></strong>, pembayaran Anda telah berhasil kami terima.
+            </p>
+        </div>
+
+        <?php if ( $is_fully_paid ) : 
+            $downloads = $main_order->get_downloadable_items();
+            $custom_link = trim( (string) get_post_meta( $main_order_id, 'download_links', true ) );
+        ?>
+            <div style="background:#fff; border: 1px solid #00a37d; border-radius:12px; padding:20px; margin-bottom:15px;">
+                <h3 style="margin:0 0 15px; font-size:16px; color:#00a37d; border-bottom: 1px solid #f0f0f0; padding-bottom:10px;">Akses Unduhan</h3>
+                
+                <?php if ( ! empty( $custom_link ) ) : ?>
+                    <div style="margin-bottom:15px; padding:12px; background:#fff9e6; border-radius:8px; border: 1px solid #ffeeba;">
+                        <strong style="color:#856404; font-size:13px;">⚠️ PENTING: KADALUARSA 2 BULAN</strong>
+                        <p style="font-size:12px; color:#856404; margin: 5px 0 10px 0;">Mohon segera simpan file Anda sebelum tautan ini kadaluarsa.</p>
+                        <a href="<?php echo esc_url( $custom_link ); ?>" target="_blank" style="display:inline-block; background:#00a37d; color:#fff; padding:6px 12px; border-radius:4px; text-decoration:none; font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:0.5px;">
+                            Unduh Sekarang
+                        </a>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ( ! empty( $downloads ) ) : ?>
+                    <table width="100%" style="font-size:13px; border-collapse:collapse;">
+                        <?php foreach ( $downloads as $download ) : ?>
+                            <tr>
+                                <td style="border-bottom:1px solid #f5f5f5; padding:10px 0; color:#444;"><?php echo esc_html( $download['product_name'] ); ?></td>
+                                <td align="right" style="border-bottom:1px solid #f5f5f5; padding:10px 0;">
+                                    <a href="<?php echo esc_url( $download['download_url'] ); ?>" style="color:#00a37d; font-weight:700; text-decoration:none;">UNDUH</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </table>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <div style="background:#fff; border: 1px solid #ececec; border-radius:12px; padding:20px; margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid #f0f0f0; padding-bottom:10px;">
+                <h3 style="margin:0; font-size:16px; color:#333;">
+                    <?php echo $is_fully_paid ? 'Rincian Pesanan' : 'Ringkasan Bayar'; ?>
+                </h3>
+                <span style="background:<?php echo $is_fully_paid ? '#e6f9ed' : '#fff4e6'; ?>; color:<?php echo $is_fully_paid ? '#00a37d' : '#d97706'; ?>; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold;">
+                    <?php echo $is_fully_paid ? 'LUNAS' : 'BELUM LUNAS'; ?>
+                </span>
+            </div>
+            
+            <table width="100%" style="font-size:14px; border-collapse:collapse;">
+                <?php 
+                $display_order = $is_fully_paid ? $main_order : $order;
+                foreach ( $display_order->get_order_item_totals() as $key => $total ) : 
+                    if ( $is_fully_paid && strpos( strtolower($total['label']), 'sisa' ) !== false ) continue;
+                    $is_grand_total = (strpos(strtolower($key), 'total') !== false && strpos(strtolower($key), 'tax') === false);
+                ?>
+                    <tr>
+                        <td align="left" style="padding:6px 0; color:#666;"><?php echo esc_html( $total['label'] ); ?></td>
+                        <td align="right" style="padding:6px 0; font-weight:<?php echo $is_grand_total ? '800' : '500'; ?>; color:<?php echo $is_grand_total ? '#000' : '#333'; ?>; font-size:<?php echo $is_grand_total ? '16px' : '14px'; ?>;">
+                            <?php echo wp_kses_post( $total['value'] ); ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        </div>
+
+        <?php if ( is_array( $schedule ) ) : ?>
+            <div style="background:#fff; border: 1px solid #ececec; border-radius:12px; padding:20px;">
+                <h3 style="margin:0 0 15px; font-size:16px; color:#333; border-bottom: 1px solid #f0f0f0; padding-bottom:10px;">Status Pembayaran</h3>
+                <table width="100%" style="font-size:13px; border-collapse:collapse;">
+                    <thead>
+                        <tr style="color: #888; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px;">
+                            <th align="left" style="padding:8px 0;">Tahap</th>
+                            <th align="right" style="padding:8px 0;">Jumlah</th>
+                            <th align="right" style="padding:8px 0;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ( ! empty( $schedule['deposit'] ) ) : ?>
+                        <tr>
+                            <td style="padding:12px 0; border-bottom: 1px solid #f9f9f9; font-weight:600; color:#444;">DP</td>
+                            <td align="right" style="padding:12px 0; border-bottom: 1px solid #f9f9f9; color:#444;"><?php echo wc_price( $schedule['deposit']['total'] ); ?></td>
+                            <td align="right" style="padding:12px 0; border-bottom: 1px solid #f9f9f9;">
+                                <span style="color:<?php echo $dp_done ? '#00a37d' : '#e63946'; ?>; font-weight:700;">
+                                    <?php echo $dp_done ? 'DP Lunas' : 'Belum Bayar'; ?>
+                                </span>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
+
+                        <?php if ( ! empty( $schedule['unlimited'] ) ) : ?>
+                        <tr>
+                            <td style="padding:12px 0; border-bottom: 1px solid #f9f9f9; font-weight:600; color:#444;">Pelunasan</td>
+                            <td align="right" style="padding:12px 0; border-bottom: 1px solid #f9f9f9; color:#444;"><?php echo wc_price( $schedule['unlimited']['total'] ); ?></td>
+                            <td align="right" style="padding:12px 0; border-bottom: 1px solid #f9f9f9;">
+                                <span style="color:<?php echo $final_done ? '#00a37d' : '#e63946'; ?>; font-weight:700;">
+                                    <?php echo $final_done ? 'Selesai' : 'Belum Bayar'; ?>
+                                </span>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+
+    </div>
+</div>
