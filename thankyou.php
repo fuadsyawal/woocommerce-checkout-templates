@@ -1,7 +1,7 @@
 <?php
 /**
- * WooCommerce Custom Thank You Page - Final Polish
- * Features: Soft typography, precise download instructions, and futuristic list timeline.
+ * WooCommerce Custom Thank You Page - THE FINAL EDITION
+ * Features: Copy to Clipboard, Soft Typography, Futuristic Timeline, and Robust Redirects.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -52,18 +52,14 @@ if ( empty( $mt_redirect ) ) { $mt_redirect = $order->get_checkout_payment_url()
             <div style="text-align:center; padding:10px 0 25px;">
                 <div style="width:50px; height:50px; background:#e6f9ed; color:#00a37d; border-radius:50%; line-height:50px; margin:0 auto 12px; font-size:22px;">✓</div>
                 <h2 style="margin:0; font-size:20px; color:#1a1a1a; font-weight:600;">Pembayaran Berhasil</h2>
-                <p style="margin:5px 0 0; color:#666; font-size:14px;">
-                    Terima kasih <strong><?php echo esc_html( $order->get_billing_first_name() ); ?></strong>, pesanan Anda telah kami terima.
-                </p>
+                <p style="margin:5px 0 0; color:#666; font-size:14px;">Terima kasih <strong><?php echo esc_html( $order->get_billing_first_name() ); ?></strong>, pesanan Anda telah kami terima.</p>
             </div>
         <?php else : ?>
             <div style="text-align:center; margin-bottom:20px; padding:30px; background:#fff; border-radius:16px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border:1px solid #f0f0f0;">
                 <div style="width:50px; height:50px; background:#fff4e6; color:#d97706; border-radius:50%; line-height:50px; margin:0 auto 12px; font-size:20px;">!</div>
                 <h2 style="margin:0; font-size:18px; color:#1a1a1a; font-weight:600;">Menunggu Pembayaran</h2>
                 <p style="margin:8px 0 20px; color:#666; font-size:13px;">Silakan selesaikan transaksi Anda untuk mengakses file pesanan.</p>
-                <a href="<?php echo esc_url( $mt_redirect ); ?>" style="display:block; background:#00a37d; color:#fff; padding:12px; border-radius:10px; text-decoration:none; font-weight:600; font-size:13px;">
-                    BAYAR SEKARANG
-                </a>
+                <a href="<?php echo esc_url( $mt_redirect ); ?>" style="display:block; background:#00a37d; color:#fff; padding:12px; border-radius:10px; text-decoration:none; font-weight:600; font-size:13px;">BAYAR SEKARANG</a>
             </div>
         <?php endif; ?>
 
@@ -82,16 +78,24 @@ if ( empty( $mt_redirect ) ) { $mt_redirect = $order->get_checkout_payment_url()
                 </div>
 
                 <?php if ( ! empty( $custom_link ) ) : ?>
-                    <a href="<?php echo esc_url( $custom_link ); ?>" target="_blank" style="display:block; text-align:center; background:#00a37d; color:#fff; padding:12px; border-radius:10px; text-decoration:none; font-weight:700; font-size:13px; margin-bottom:10px;">
-                        UNDUH DARI CLOUD STORAGE
-                    </a>
+                    <div style="margin-bottom:10px;">
+                        <a href="<?php echo esc_url( $custom_link ); ?>" target="_blank" style="display:block; text-align:center; background:#00a37d; color:#fff; padding:12px; border-radius:10px; text-decoration:none; font-weight:700; font-size:13px; margin-bottom:8px;">
+                            BUKA LINK CLOUD STORAGE
+                        </a>
+                        <button onclick="copyToClipboard('<?php echo esc_url($custom_link); ?>', this)" style="width:100%; background:#fff; border:1px solid #ddd; color:#666; padding:10px; border-radius:10px; cursor:pointer; font-size:11px; font-weight:600; transition:all 0.2s;">
+                            🔗 SALIN LINK UNTUK BERBAGI
+                        </button>
+                    </div>
                 <?php endif; ?>
 
                 <?php if ( ! empty( $downloads ) ) : ?>
                     <?php foreach ( $downloads as $download ) : ?>
                         <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px solid #eee; padding:10px 15px; border-radius:10px; margin-bottom:8px;">
                             <span style="font-size:12px; color:#333; font-weight:500;"><?php echo esc_html( $download['product_name'] ); ?></span>
-                            <a href="<?php echo esc_url( $download['download_url'] ); ?>" style="color:#00a37d; text-decoration:none; font-size:11px; font-weight:700; text-transform:uppercase;">Unduh</a>
+                            <div style="display:flex; gap:10px;">
+                                <span onclick="copyToClipboard('<?php echo esc_url($download['download_url']); ?>', this)" style="color:#999; cursor:pointer; font-size:11px; font-weight:700;">SALIN</span>
+                                <a href="<?php echo esc_url( $download['download_url'] ); ?>" style="color:#00a37d; text-decoration:none; font-size:11px; font-weight:700; text-transform:uppercase;">Unduh</a>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -119,7 +123,6 @@ if ( empty( $mt_redirect ) ) { $mt_redirect = $order->get_checkout_payment_url()
         <?php if ( is_array( $schedule ) ) : ?>
             <div style="padding:5px 20px;">
                 <h4 style="font-size:11px; color:#bbb; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:15px; font-weight:700;">Riwayat Pembayaran</h4>
-                
                 <?php 
                     $dp_done = false; $final_done = false;
                     if (!empty($schedule['deposit']['id'])) {
@@ -131,24 +134,50 @@ if ( empty( $mt_redirect ) ) { $mt_redirect = $order->get_checkout_payment_url()
                         if($fn_o && $fn_o->has_status(['completed','processing'])) $final_done = true;
                     }
                 ?>
-
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <div style="display:flex; align-items:center;">
-                        <div style="width:8px; height:8px; background:<?php echo $dp_done ? '#00a37d' : '#ddd'; ?>; border-radius:50%; margin-right:12px; box-shadow: <?php echo $dp_done ? '0 0 8px rgba(0,163,125,0.3)' : 'none'; ?>;"></div>
+                        <div style="width:8px; height:8px; background:<?php echo $dp_done ? '#00a37d' : '#ddd'; ?>; border-radius:50%; margin-right:12px;"></div>
                         <span style="font-size:13px; color:<?php echo $dp_done ? '#1a1a1a' : '#aaa'; ?>;">DP (Down Payment)</span>
                     </div>
                     <span style="font-size:11px; font-weight:700; color:<?php echo $dp_done ? '#00a37d' : '#d97706'; ?>;"><?php echo $dp_done ? 'LUNAS' : 'PENDING'; ?></span>
                 </div>
-
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center;">
-                        <div style="width:8px; height:8px; background:<?php echo $final_done ? '#00a37d' : '#ddd'; ?>; border-radius:50%; margin-right:12px; box-shadow: <?php echo $final_done ? '0 0 8px rgba(0,163,125,0.3)' : 'none'; ?>;"></div>
+                        <div style="width:8px; height:8px; background:<?php echo $final_done ? '#00a37d' : '#ddd'; ?>; border-radius:50%; margin-right:12px;"></div>
                         <span style="font-size:13px; color:<?php echo $final_done ? '#1a1a1a' : '#aaa'; ?>;">Pelunasan</span>
                     </div>
                     <span style="font-size:11px; font-weight:700; color:<?php echo $final_done ? '#00a37d' : '#d97706'; ?>;"><?php echo $final_done ? 'LUNAS' : 'PENDING'; ?></span>
                 </div>
             </div>
         <?php endif; ?>
-
+<?php 
+/** * Show refresh notice only for fully paid orders 
+ * (Filters out 'pending', 'on-hold', and 'partially-paid')
+ */
+if ( $order->has_status( array( 'processing', 'completed' ) ) ) : 
+?>
+    <div style="margin-top: 10px; padding: 10px; background: #fdfaea; border-radius: 8px; border: 1px solid #f5e79e; font-size: 13px; line-height: 1.4; color: #7a6a1a; text-align: center;">
+        Link belum muncul? <a href="javascript:location.reload();" style="font-weight: 600; color: #00a37d; text-decoration: none;">Refresh Halaman</a>. 
+        Masih Bermasalah? Hubungi <a href="https://wa.me/6285175223948" style="font-weight: 600; color: #00a37d; text-decoration: none;">WhatsApp</a>.
     </div>
-</div>
+<?php endif; ?>
+
+<script>
+function copyToClipboard(text, element) {
+    var dummy = document.createElement("textarea");
+    document.body.appendChild(dummy);
+    dummy.value = text;
+    dummy.select();
+    document.execCommand("copy");
+    document.body.removeChild(dummy);
+    
+    var originalText = element.innerHTML;
+    element.innerHTML = "✅ BERHASIL DISALIN!";
+    element.style.color = "#00a37d";
+    
+    setTimeout(function(){
+        element.innerHTML = originalText;
+        element.style.color = "";
+    }, 2000);
+}
+</script>
