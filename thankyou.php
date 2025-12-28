@@ -2,6 +2,7 @@
 /**
  * WooCommerce Custom Thank You Page - OPTIMIZED EDITION
  * Performance: Consolidated database queries for faster loading.
+ * Features: Detailed Itemized List (Acowebs Addons & Tyche Bookings)
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -23,7 +24,6 @@ $main_order = wc_get_order( $main_order_id );
 $schedule = $main_order->get_meta( '_awcdp_deposits_payment_schedule', true );
 
 // --- 2. PRE-FETCH INSTALLMENT ORDERS (PERFORMANCE BOOST) ---
-// We fetch these once here and reuse them for the Timeline, Redirects, and Refresh Notice.
 $dp_order = null;
 $fn_order = null;
 $dp_done = false;
@@ -43,7 +43,7 @@ if ( is_array( $schedule ) ) {
 $is_fully_paid = ( $main_order->has_status( 'completed' ) || $final_done );
 $current_status_paid = $order->has_status( array( 'completed', 'processing' ) );
 
-// --- 3. MIDTRANS RETRY LOGIC (REUSING PRE-FETCHED ORDERS) ---
+// --- 3. MIDTRANS RETRY LOGIC ---
 $mt_redirect = $order->get_meta( '_mt_payment_url' );
 if ( empty( $mt_redirect ) ) {
     if ( $fn_order ) { $mt_redirect = $fn_order->get_meta( '_mt_payment_url' ); }
@@ -74,6 +74,22 @@ remove_action( 'woocommerce_thankyou', 'woocommerce_customer_details', 20 );
             </div>
         <?php endif; ?>
 
+        <?php 
+        $show_refresh_notice = false;
+        if ( is_array($schedule) ) {
+            if ( $final_done ) { $show_refresh_notice = true; }
+        } else {
+            if ( $current_status_paid ) { $show_refresh_notice = true; }
+        }
+
+        if ( $show_refresh_notice ) : 
+        ?>
+            <div style="margin-bottom: 20px; padding: 12px; background: #fdfaea; border-radius: 8px; border: 1px solid #f5e79e; font-size: 13px; line-height: 1.4; color: #7a6a1a; text-align: center;">
+                Link belum muncul? <a href="javascript:location.reload();" style="font-weight: 600; color: #00a37d; text-decoration: none;">Refresh Halaman</a>. 
+                Masih bermasalah? Hubungi <a href="https://wa.me/6285175223948" style="font-weight: 600; color: #00a37d; text-decoration: none;">WhatsApp</a>.
+            </div>
+        <?php endif; ?>
+
         <?php if ( $is_fully_paid ) : 
             $downloads = $main_order->get_downloadable_items();
             $custom_link = trim( (string) get_post_meta( $main_order_id, 'download_links', true ) );
@@ -84,7 +100,6 @@ remove_action( 'woocommerce_thankyou', 'woocommerce_customer_details', 20 );
                 <div style="font-size:13px; color:#555; background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:20px; border-left: 3px solid #00a37d;">
                     <p style="margin:0 0 10px 0;">Akses link akan aktif selama <strong>2 bulan</strong> sejak hari ini.</p>
                     <p style="margin:0 0 10px 0;">Untuk menghindari kehilangan file, mohon segera unduh dan simpan foto Anda.</p>
-                    <p style="margin:0; font-size:12px; color:#888;"><em><strong>Catatan:</strong> Kami menyimpan backup sementara untuk keperluan internal.</em></p>
                 </div>
 
                 <?php if ( ! empty( $custom_link ) ) : ?>
@@ -93,7 +108,7 @@ remove_action( 'woocommerce_thankyou', 'woocommerce_customer_details', 20 );
                         <button onclick="copyToClipboard('<?php echo esc_url($custom_link); ?>', this)" style="width:100%; background:#fff; border:1px solid #ddd; color:#666; padding:10px; border-radius:10px; cursor:pointer; font-size:11px; font-weight:600;">🔗 SALIN LINK UNTUK BERBAGI</button>
                     </div>
                 <?php endif; ?>
-				        
+
                 <?php if ( ! empty( $downloads ) ) : ?>
                     <?php foreach ( $downloads as $download ) : ?>
                         <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px solid #eee; padding:10px 15px; border-radius:10px; margin-bottom:8px;">
@@ -107,24 +122,40 @@ remove_action( 'woocommerce_thankyou', 'woocommerce_customer_details', 20 );
                 <?php endif; ?>
             </div>
         <?php endif; endif; ?>
-<?php 
-        $show_refresh_notice = false;
-        if ( is_array($schedule) ) {
-            if ( $final_done ) { $show_refresh_notice = true; }
-        } else {
-            if ( $current_status_paid ) { $show_refresh_notice = true; }
-        }
 
-        if ( $show_refresh_notice ) : 
-        ?>
-            <div style="margin-top: 15px; padding: 12px; background: #fdfaea; border-radius: 8px; border: 1px solid #f5e79e; font-size: 13px; line-height: 1.4; color: #7a6a1a; text-align: center;">
-                Link belum muncul? <a href="javascript:location.reload();" style="font-weight: 600; color: #00a37d; text-decoration: none;">Refresh Halaman</a>. 
-                Masih bermasalah? Hubungi <a href="https://wa.me/6285175223948" style="font-weight: 600; color: #00a37d; text-decoration: none;">WhatsApp</a>.
-            </div>
-        <?php endif; ?>
         <div style="background:#fff; border-radius:16px; padding:25px; margin-bottom:20px; border:1px solid #f0f0f0;">
             <h3 style="margin:0 0 15px; font-size:13px; color:#999; text-transform:uppercase; letter-spacing:1px; font-weight:600;">Rincian Pesanan</h3>
-            <table width="100%" style="font-size:14px; border-collapse:collapse;">
+            
+            <?php 
+            $items = $main_order->get_items();
+            foreach ( $items as $item_id => $item ) : 
+            ?>
+                <div style="padding-bottom:15px; margin-bottom:15px; border-bottom:1px dashed #eee;">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                        <span style="font-size:15px; font-weight:700; color:#1a1a1a;"><?php echo esc_html( $item->get_name() ); ?></span>
+                        <span style="font-size:14px; color:#1a1a1a; font-weight:600;"><?php echo $main_order->get_formatted_line_subtotal( $item ); ?></span>
+                    </div>
+
+                    <div style="margin-top:8px;">
+                        <?php 
+                        $formatted_meta = $item->get_all_formatted_meta_data('');
+                        if ( $formatted_meta ) : ?>
+                            <ul style="margin:0; padding:0; list-style:none;">
+                                <?php foreach ( $formatted_meta as $meta ) : 
+                                    if ( strpos($meta->key, '_') === 0 ) continue; 
+                                ?>
+                                    <li style="font-size:12px; color:#666; margin-bottom:3px; display:flex; justify-content:space-between; gap:15px;">
+                                        <span style="font-weight:500; min-width:120px;"><?php echo wp_kses_post( $meta->display_key ); ?>:</span>
+                                        <span style="text-align:right; color:#333;"><?php echo wp_kses_post( $meta->display_value ); ?></span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+
+            <table width="100%" style="font-size:14px; border-collapse:collapse; margin-top:5px;">
                 <?php 
                 $display_order = $is_fully_paid ? $main_order : $order;
                 foreach ( $display_order->get_order_item_totals() as $key => $total ) : 
@@ -132,8 +163,8 @@ remove_action( 'woocommerce_thankyou', 'woocommerce_customer_details', 20 );
                     $is_total = (strpos(strtolower($key), 'total') !== false);
                 ?>
                     <tr>
-                        <td align="left" style="padding:8px 0; color:#666;"><?php echo esc_html( $total['label'] ); ?></td>
-                        <td align="right" style="padding:8px 0; color:#1a1a1a; font-weight:<?php echo $is_total ? '600' : '400'; ?>; font-size:<?php echo $is_total ? '16px' : '14px'; ?>;"><?php echo wp_kses_post( $total['value'] ); ?></td>
+                        <td align="left" style="padding:6px 0; color:#888;"><?php echo esc_html( $total['label'] ); ?></td>
+                        <td align="right" style="padding:6px 0; color:#1a1a1a; font-weight:<?php echo $is_total ? '700' : '400'; ?>; font-size:<?php echo $is_total ? '16px' : '14px'; ?>;"><?php echo wp_kses_post( $total['value'] ); ?></td>
                     </tr>
                 <?php endforeach; ?>
             </table>
@@ -158,8 +189,6 @@ remove_action( 'woocommerce_thankyou', 'woocommerce_customer_details', 20 );
                 </div>
             </div>
         <?php endif; ?>
-
-
 
     </div>
 </div>
